@@ -1,0 +1,10 @@
+[Unit]
+Description=Write Intel X11 config to /etc/X11/xorg.conf.d on startup
+
+[Service]
+Type=oneshot
+ExecStart=cp -fv /etc/gpu-select/intel.conf /etc/X11/xorg.conf.d/gpu-select.conf
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

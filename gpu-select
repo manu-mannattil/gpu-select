@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# NAME
+#
+#   gpu-select - a script to switch between Intel/NVIDIA graphics
+#
+# SYNOPSIS
+#
+#   gpu-select intel|hybrid|nvidia|query
+#
+# DESCRIPTION
+#
+#   gpu-select is a utility similar to Ubuntu's prime-select(1) that
+#   allows one to switch between Intel/NVIDIA graphics on PRIME systems.
+#
+# OPTIONS
+#
+#   intel       turn off the GPU and run X on Intel graphics
+#   hybrid      turn on the GPU but run X on Intel graphics
+#   nvidia      turn on the GPU and run X on NVIDIA graphics
+#   query       report state (i.e., contents of /etc/gpu-select/state)
+#
+
+case "$1" in
+    query)
+        if [ -f /etc/gpu-select/state ]
+        then
+            cat /etc/gpu-select/state
+            exit 0
+        else
+            echo >&2 "${0##*/}: unknown; have you run gpu-select before?"
+            exit 1
+        fi
+        ;;
+    intel|hybrid|nvidia)
+        # From now on, bail out on the first error and always run as root.
+        set -eu
+        test $(id -u) -eq 0 || exec sudo -- "$0" "$@"
+        ;;
+    *)
+        echo >&2 "usage: ${0##*/} intel|hybrid|nvidia|query"
+        exit 1
+        ;;
+esac
+
+# X configuration files will be copied here depending on the supplied option.
+mkdir -p "/etc/X11/xorg.conf.d"
+x11conf="/etc/X11/xorg.conf.d/gpu-select.conf"
+
+# X configuration files for NVIDIA and Intel.
+nvidia="/etc/gpu-select/nvidia.conf"
+intel="/etc/gpu-select/intel.conf"
+
+case "$1" in
+    intel)  echo >&2 "${0##*/}: disabling NVIDIA drivers."
+            modprobe -r nvidia-drm
+            modprobe -r nvidia-modeset
+            modprobe -r nvidia-current
+            modprobe -r nvidia
+            echo >&2 "${0##*/}: turning off the NVIDIA GPU."
+            echo "OFF" >/proc/acpi/bbswitch
+            echo >&2 "${0##*/}: copying X configuration files for Intel."
+            cp -f "$intel" "$x11conf"
+            echo "intel" >/etc/gpu-select/state
+            ;;
+    hybrid) echo >&2 "${0##*/}: turning on the NVIDIA GPU."
+            echo "ON" >/proc/acpi/bbswitch
+            echo >&2 "${0##*/}: loading NVIDIA drivers."
+            modprobe nvidia-drm modeset=1
+            modprobe nvidia-modeset
+            modprobe nvidia
+            echo >&2 "${0##*/}: copying X configuration files for Intel."
+            cp -f "$intel" "$x11conf"
+            echo "hybrid" >/etc/gpu-select/state
+            ;;
+    nvidia) echo >&2 "${0##*/}: turning on the NVIDIA GPU."
+            echo "ON" >/proc/acpi/bbswitch
+            echo >&2 "${0##*/}: loading NVIDIA drivers."
+            modprobe nvidia-drm modeset=1
+            modprobe nvidia-modeset
+            modprobe nvidia
+            echo >&2 "${0##*/}: copying X configuration files for NVIDIA."
+            cp -f "$nvidia" "$x11conf"
+            echo "nvidia" >/etc/gpu-select/state
+            ;;
+esac
