@@ -12,6 +12,7 @@ install:
 	cp -f gpu-select-intel.service /etc/systemd/system
 	systemctl enable gpu-select-intel.service
 	update-initramfs -k all -c
+	systemctl list-unit-files | grep -q nvidia-persistenced.service && systemctl disable --now nvidia-persistenced.service
 
 uninstall:
 	rm -rf /etc/gpu-select
@@ -20,4 +21,5 @@ uninstall:
 	rm -f /etc/modules-load.d/bbswitch.conf
 	systemctl disable gpu-select-intel.service
 	rm -f /etc/systemd/system/gpu-select-intel.service
+	systemctl list-unit-files | grep -q nvidia-persistenced.service && systemctl enable --now nvidia-persistenced.service
 	update-initramfs -k all -c

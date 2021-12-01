@@ -4,6 +4,7 @@ Description=Write Intel X11 config to /etc/X11/xorg.conf.d on startup
 [Service]
 Type=oneshot
 ExecStart=cp -fv /etc/gpu-select/intel.conf /etc/X11/xorg.conf.d/gpu-select.conf
+ExecStart=/bin/sh -c 'echo intel >/etc/gpu-select/state'
 StandardError=journal
 
 [Install]

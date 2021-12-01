@@ -21,6 +21,13 @@
 #   query       report state (i.e., contents of /etc/gpu-select/state)
 #
 
+service() {
+    if systemctl list-unit-files | grep -q "$2"
+    then
+        systemctl "$1" "$2"
+    fi
+}
+
 case "$1" in
     query)
         if [ -f /etc/gpu-select/state ]
@@ -52,7 +59,9 @@ nvidia="/etc/gpu-select/nvidia.conf"
 intel="/etc/gpu-select/intel.conf"
 
 case "$1" in
-    intel)  echo >&2 "${0##*/}: disabling NVIDIA drivers."
+    intel)
+            echo >&2 "${0##*/}: disabling NVIDIA drivers."
+            service stop nvidia-persistenced.service
             modprobe -r nvidia-drm
             modprobe -r nvidia-modeset
             modprobe -r nvidia-current
@@ -63,24 +72,23 @@ case "$1" in
             cp -f "$intel" "$x11conf"
             echo "intel" >/etc/gpu-select/state
             ;;
-    hybrid) echo >&2 "${0##*/}: turning on the NVIDIA GPU."
+    hybrid|nvidia)
+            echo >&2 "${0##*/}: turning on the NVIDIA GPU."
             echo "ON" >/proc/acpi/bbswitch
             echo >&2 "${0##*/}: loading NVIDIA drivers."
             modprobe nvidia-drm modeset=1
             modprobe nvidia-modeset
             modprobe nvidia
-            echo >&2 "${0##*/}: copying X configuration files for Intel."
-            cp -f "$intel" "$x11conf"
-            echo "hybrid" >/etc/gpu-select/state
-            ;;
-    nvidia) echo >&2 "${0##*/}: turning on the NVIDIA GPU."
-            echo "ON" >/proc/acpi/bbswitch
-            echo >&2 "${0##*/}: loading NVIDIA drivers."
-            modprobe nvidia-drm modeset=1
-            modprobe nvidia-modeset
-            modprobe nvidia
-            echo >&2 "${0##*/}: copying X configuration files for NVIDIA."
-            cp -f "$nvidia" "$x11conf"
-            echo "nvidia" >/etc/gpu-select/state
+            service start nvidia-persistenced.service
+            case "$1" in
+                hybrid) echo >&2 "${0##*/}: copying X configuration files for Intel."
+                        cp -f "$intel" "$x11conf"
+                        echo "hybrid" >/etc/gpu-select/state
+                        ;;
+                nvidia) echo >&2 "${0##*/}: copying X configuration files for NVIDIA."
+                        cp -f "$nvidia" "$x11conf"
+                        echo "nvidia" >/etc/gpu-select/state
+                        ;;
+            esac
             ;;
 esac

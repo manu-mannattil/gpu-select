@@ -32,7 +32,7 @@ the decimal bus ID of the NVIDIA device in the above example is
 The basic usage is
 
 ```
-$ gpu-select intel|hybrid|nvidia|query
+gpu-select intel|hybrid|nvidia|query
 ```
 
 The options `nvidia` and `intel` turn the GPU on/off and configures X to
@@ -85,8 +85,15 @@ kernel parameters for bbswitch to work.  However, note that
 `pcie_port_pm=off` disables PCIe port power management, which almost
 always *will* result in poor battery life.
 
-gpu-select has been most recently tested with bbswitch 0.8-9 and NVIDIA
-drivers 440.100 from buster-backports on Debian 10.5.
+If `modprobe` refuses to remove the `nvidia` module and says that it's
+in use, check the processes using it:
+
+```
+lsof -n -w -t /dev/nvidia*
+```
+
+gpu-select has been most recently tested with bbswitch 0.8-10 and NVIDIA
+drivers 460.91 on Debian 11.1.
 
 ## License
 
